@@ -1,0 +1,1406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>I/O Organization – Study Guide</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Sora:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0f1e;
+    --surface: #111827;
+    --surface2: #1a2235;
+    --accent: #00e5ff;
+    --accent2: #7c3aed;
+    --accent3: #f59e0b;
+    --accent4: #10b981;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --border: rgba(0,229,255,0.15);
+    --glow: 0 0 20px rgba(0,229,255,0.3);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Sora', sans-serif;
+    font-size: 15px;
+    line-height: 1.7;
+    overflow-x: hidden;
+  }
+
+  /* Starfield background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      radial-gradient(1px 1px at 20% 30%, rgba(255,255,255,0.4) 0%, transparent 100%),
+      radial-gradient(1px 1px at 80% 10%, rgba(255,255,255,0.3) 0%, transparent 100%),
+      radial-gradient(1px 1px at 50% 70%, rgba(255,255,255,0.2) 0%, transparent 100%),
+      radial-gradient(1px 1px at 10% 90%, rgba(255,255,255,0.3) 0%, transparent 100%),
+      radial-gradient(1px 1px at 90% 60%, rgba(255,255,255,0.2) 0%, transparent 100%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* HEADER */
+  header {
+    position: relative;
+    padding: 60px 40px 40px;
+    text-align: center;
+    background: linear-gradient(160deg, #0d1b3e 0%, #0a0f1e 60%);
+    border-bottom: 1px solid var(--border);
+    overflow: hidden;
+  }
+  header::after {
+    content: '';
+    position: absolute;
+    bottom: -2px; left: 50%; transform: translateX(-50%);
+    width: 200px; height: 4px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  }
+  .module-tag {
+    display: inline-block;
+    background: rgba(0,229,255,0.1);
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 3px;
+    padding: 4px 14px;
+    border-radius: 2px;
+    margin-bottom: 18px;
+    text-transform: uppercase;
+  }
+  h1 {
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -1px;
+    background: linear-gradient(135deg, #fff 0%, var(--accent) 60%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 12px;
+  }
+  .subtitle {
+    color: var(--muted);
+    font-size: 14px;
+    font-weight: 300;
+    letter-spacing: 1px;
+  }
+
+  /* NAV */
+  nav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(10,15,30,0.95);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 20px;
+    display: flex;
+    gap: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  nav::-webkit-scrollbar { display: none; }
+  nav a {
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    padding: 14px 16px;
+    white-space: nowrap;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+  }
+  nav a:hover {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+
+  /* MAIN */
+  main {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 50px 24px 100px;
+  }
+
+  /* SECTION */
+  .section {
+    margin-bottom: 70px;
+    animation: fadeUp 0.5s ease both;
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 28px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .section-num {
+    width: 40px; height: 40px;
+    background: linear-gradient(135deg, var(--accent2), var(--accent));
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    font-weight: 700;
+    color: #fff;
+    flex-shrink: 0;
+    box-shadow: var(--glow);
+  }
+  h2 {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: -0.5px;
+  }
+  h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--accent);
+    margin: 24px 0 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  h3::before {
+    content: '▸';
+    font-size: 10px;
+    color: var(--accent3);
+  }
+
+  /* CARDS */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px 28px;
+    margin-bottom: 18px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .card:hover {
+    border-color: rgba(0,229,255,0.35);
+    box-shadow: var(--glow);
+  }
+
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+    margin-bottom: 18px;
+  }
+
+  .highlight-card {
+    background: linear-gradient(135deg, rgba(124,58,237,0.15), rgba(0,229,255,0.08));
+    border-color: rgba(124,58,237,0.4);
+  }
+
+  .warn-card {
+    background: linear-gradient(135deg, rgba(245,158,11,0.12), rgba(245,158,11,0.04));
+    border-color: rgba(245,158,11,0.35);
+  }
+
+  .success-card {
+    background: linear-gradient(135deg, rgba(16,185,129,0.12), rgba(16,185,129,0.04));
+    border-color: rgba(16,185,129,0.35);
+  }
+
+  p { color: var(--text); margin-bottom: 10px; }
+  p:last-child { margin-bottom: 0; }
+
+  strong { color: var(--accent); font-weight: 600; }
+
+  /* BADGE */
+  .badge {
+    display: inline-block;
+    font-size: 10px;
+    font-family: 'Space Mono', monospace;
+    letter-spacing: 1px;
+    padding: 3px 9px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    margin-right: 6px;
+    font-weight: 700;
+  }
+  .badge-cyan  { background: rgba(0,229,255,0.15); color: var(--accent); border: 1px solid rgba(0,229,255,0.3); }
+  .badge-amber { background: rgba(245,158,11,0.15); color: var(--accent3); border: 1px solid rgba(245,158,11,0.3); }
+  .badge-green { background: rgba(16,185,129,0.15); color: var(--accent4); border: 1px solid rgba(16,185,129,0.3); }
+  .badge-purple{ background: rgba(124,58,237,0.15); color: #a78bfa; border: 1px solid rgba(124,58,237,0.3); }
+
+  /* TABLE */
+  .table-wrap { overflow-x: auto; margin: 18px 0; border-radius: 10px; border: 1px solid var(--border); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead tr { background: rgba(0,229,255,0.1); }
+  th {
+    color: var(--accent);
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 12px 16px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+  td {
+    padding: 10px 16px;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    color: var(--text);
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(0,229,255,0.04); }
+
+  /* CODE */
+  .code-block {
+    background: #060c1a;
+    border: 1px solid rgba(0,229,255,0.2);
+    border-left: 3px solid var(--accent);
+    border-radius: 8px;
+    padding: 18px 22px;
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    line-height: 1.8;
+    color: #7dd3fc;
+    overflow-x: auto;
+    margin: 14px 0;
+  }
+  .code-block .comment { color: #475569; }
+  .code-block .label { color: #f59e0b; }
+  .code-block .instr { color: #a78bfa; }
+
+  /* DIAGRAM */
+  .diagram {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 30px 20px;
+    margin: 20px 0;
+    overflow-x: auto;
+  }
+
+  /* FLOW BOXES */
+  .flow {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0;
+    justify-content: center;
+    margin: 20px 0;
+  }
+  .flow-box {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 18px;
+    font-size: 12px;
+    font-family: 'Space Mono', monospace;
+    color: var(--accent);
+    text-align: center;
+    min-width: 110px;
+    transition: background 0.2s;
+  }
+  .flow-box:hover { background: rgba(0,229,255,0.1); }
+  .flow-arrow {
+    color: var(--accent3);
+    font-size: 18px;
+    padding: 0 6px;
+  }
+  .flow-box.active {
+    background: rgba(0,229,255,0.12);
+    border-color: var(--accent);
+    box-shadow: var(--glow);
+  }
+  .flow-box.decision {
+    clip-path: polygon(50% 0%,100% 50%,50% 100%,0% 50%);
+    border-radius: 0;
+    padding: 18px;
+    background: rgba(245,158,11,0.12);
+    border-color: var(--accent3);
+    color: var(--accent3);
+  }
+
+  /* BUS SVG */
+  svg text { font-family: 'Sora', sans-serif; }
+
+  /* STEP LIST */
+  .steps { counter-reset: step; list-style: none; }
+  .steps li {
+    counter-increment: step;
+    display: flex;
+    gap: 16px;
+    margin-bottom: 14px;
+    align-items: flex-start;
+  }
+  .steps li::before {
+    content: counter(step);
+    flex-shrink: 0;
+    width: 28px; height: 28px;
+    background: linear-gradient(135deg, var(--accent2), var(--accent));
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: #fff;
+    font-family: 'Space Mono', monospace;
+  }
+
+  /* PILL TAGS */
+  .tag-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+  .tag {
+    padding: 5px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    border: 1px solid;
+  }
+
+  /* MEMORY MAP */
+  .mem-map { display: flex; flex-direction: column; gap: 2px; margin: 16px 0; max-width: 400px; }
+  .mem-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 14px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-family: 'Space Mono', monospace;
+  }
+  .mem-addr { color: var(--accent3); min-width: 80px; }
+  .mem-label { flex: 1; }
+  .mem-io { background: rgba(0,229,255,0.1); border: 1px solid rgba(0,229,255,0.2); color: var(--accent); }
+  .mem-ram { background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.2); color: var(--accent4); }
+
+  /* COMPARISON */
+  .compare-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin: 16px 0;
+  }
+  @media (max-width: 600px) { .compare-grid { grid-template-columns: 1fr; } }
+
+  /* TIMELINE / SIGNAL */
+  .signal-row { margin: 6px 0; display: flex; align-items: center; gap: 10px; }
+  .signal-name { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--accent3); width: 70px; text-align: right; flex-shrink: 0; }
+
+  /* QUIZ SECTION */
+  .quiz-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 22px 26px;
+    margin-bottom: 14px;
+    cursor: pointer;
+    transition: all 0.25s;
+  }
+  .quiz-card:hover { border-color: var(--accent2); }
+  .quiz-q { color: var(--text); font-weight: 600; margin-bottom: 10px; }
+  .quiz-a {
+    display: none;
+    background: rgba(0,229,255,0.07);
+    border-left: 3px solid var(--accent);
+    padding: 12px 16px;
+    border-radius: 0 8px 8px 0;
+    color: var(--muted);
+    font-size: 13px;
+    margin-top: 10px;
+  }
+  .quiz-card.open .quiz-a { display: block; }
+  .quiz-hint { font-size: 11px; color: var(--accent2); font-family: 'Space Mono', monospace; margin-bottom: 6px; }
+
+  /* PRIORITY TABLE */
+  .priority-chain {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0;
+    justify-content: center;
+    margin: 20px 0;
+  }
+  .pc-box {
+    background: var(--surface2);
+    border: 1px solid;
+    border-radius: 8px;
+    padding: 10px 16px;
+    text-align: center;
+    font-size: 12px;
+  }
+  .pc-arrow { color: var(--accent4); font-size: 20px; padding: 0 4px; }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: rgba(0,229,255,0.3); border-radius: 3px; }
+
+  /* FOOTER */
+  footer {
+    text-align: center;
+    padding: 30px;
+    border-top: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 12px;
+    font-family: 'Space Mono', monospace;
+  }
+
+  /* BACK TO TOP */
+  .top-btn {
+    position: fixed;
+    bottom: 30px; right: 30px;
+    background: var(--accent);
+    color: #000;
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    text-decoration: none;
+    box-shadow: 0 0 20px rgba(0,229,255,0.5);
+    transition: transform 0.2s;
+    z-index: 200;
+  }
+  .top-btn:hover { transform: translateY(-4px); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="module-tag">Module 4 · Computer Organization</div>
+  <h1>Input / Output Organization</h1>
+  <p class="subtitle">Complete Study Guide — Buses · Memory-Mapped I/O · Programmed I/O · Interrupts · DMA</p>
+</header>
+
+<nav>
+  <a href="#overview">Overview</a>
+  <a href="#bus">Bus</a>
+  <a href="#io-interface">I/O Interface</a>
+  <a href="#mechanisms">I/O Mechanisms</a>
+  <a href="#memory-mapped">Memory-Mapped</a>
+  <a href="#programmed">Programmed I/O</a>
+  <a href="#interrupts">Interrupts</a>
+  <a href="#dma">DMA</a>
+  <a href="#arbitration">Arbitration</a>
+  <a href="#usb">USB</a>
+  <a href="#quiz">Quick Quiz</a>
+</nav>
+
+<main>
+
+<!-- ══════════════════════════════════ 1. OVERVIEW ══════════════════════════════════ -->
+<section class="section" id="overview">
+  <div class="section-header">
+    <div class="section-num">01</div>
+    <h2>Overview of I/O Organization</h2>
+  </div>
+
+  <div class="card highlight-card">
+    <p>Computers communicate with the outside world through <strong>Input/Output (I/O) devices</strong>. The key challenge is that I/O devices are much slower than the CPU, and each has different speeds and behavior. Three main mechanisms handle this:</p>
+    <div class="tag-row">
+      <span class="tag" style="border-color:#7c3aed;color:#a78bfa;background:rgba(124,58,237,0.1)">Programmed I/O</span>
+      <span class="tag" style="border-color:#00e5ff;color:#00e5ff;background:rgba(0,229,255,0.08)">Interrupt-Driven I/O</span>
+      <span class="tag" style="border-color:#10b981;color:#10b981;background:rgba(16,185,129,0.08)">DMA (Direct Memory Access)</span>
+    </div>
+  </div>
+
+  <h3>Common I/O Devices — Speed Reference</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Device</th><th>Type</th><th>Partner</th><th>Data Rate (Mbit/s)</th></tr></thead>
+      <tbody>
+        <tr><td>Keyboard</td><td><span class="badge badge-cyan">Input</span></td><td>Human</td><td>0.0001</td></tr>
+        <tr><td>Mouse</td><td><span class="badge badge-cyan">Input</span></td><td>Human</td><td>0.0038</td></tr>
+        <tr><td>Scanner</td><td><span class="badge badge-cyan">Input</span></td><td>Human</td><td>3.2</td></tr>
+        <tr><td>Sound Output</td><td><span class="badge badge-amber">Output</span></td><td>Human</td><td>8.0</td></tr>
+        <tr><td>Laser Printer</td><td><span class="badge badge-amber">Output</span></td><td>Human</td><td>3.2</td></tr>
+        <tr><td>Graphics Display</td><td><span class="badge badge-amber">Output</span></td><td>Human</td><td>800–8000</td></tr>
+        <tr><td>Network / LAN</td><td><span class="badge badge-green">Both</span></td><td>Machine</td><td>100–1000</td></tr>
+        <tr><td>Magnetic Disk</td><td><span class="badge badge-purple">Storage</span></td><td>Machine</td><td>240–2560</td></tr>
+        <tr><td>Optical Disk</td><td><span class="badge badge-purple">Storage</span></td><td>Machine</td><td>80</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="card warn-card">
+    <p>💡 <strong>Key insight:</strong> Graphics display needs thousands of Mbit/s while a keyboard needs 0.0001 Mbit/s — that's a 10-million-fold difference! This is why different I/O mechanisms are needed.</p>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════ 2. BUS ══════════════════════════════════ -->
+<section class="section" id="bus">
+  <div class="section-header">
+    <div class="section-num">02</div>
+    <h2>The Bus</h2>
+  </div>
+
+  <div class="card">
+    <p><strong>Definition:</strong> A bus is a <strong>shared communication link</strong> that uses one set of wires to connect multiple subsystems (Processor, Memory, I/O Devices).</p>
+    <p><strong>Two major advantages:</strong> Versatility and Low Cost.</p>
+    <p><strong>Major disadvantage:</strong> It can become a <strong>communication bottleneck</strong>, limiting maximum throughput when too many devices share it.</p>
+  </div>
+
+  <!-- Bus Diagram -->
+  <div class="diagram">
+    <svg viewBox="0 0 700 200" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:700px;display:block;margin:auto">
+      <!-- Bus line -->
+      <rect x="50" y="100" width="600" height="10" rx="5" fill="#00e5ff" opacity="0.8"/>
+      <text x="30" y="108" font-size="13" fill="#94a3b8" font-family="Sora,sans-serif">Bus</text>
+
+      <!-- Processor -->
+      <rect x="80" y="30" width="110" height="50" rx="8" fill="#1a2235" stroke="#7c3aed" stroke-width="1.5"/>
+      <text x="135" y="61" font-size="12" fill="#a78bfa" text-anchor="middle" font-family="Sora,sans-serif">Processor</text>
+      <line x1="135" y1="80" x2="135" y2="100" stroke="#7c3aed" stroke-width="2"/>
+
+      <!-- Memory -->
+      <rect x="290" y="30" width="110" height="50" rx="8" fill="#1a2235" stroke="#00e5ff" stroke-width="1.5"/>
+      <text x="345" y="61" font-size="12" fill="#00e5ff" text-anchor="middle" font-family="Sora,sans-serif">Memory</text>
+      <line x1="345" y1="80" x2="345" y2="100" stroke="#00e5ff" stroke-width="2"/>
+
+      <!-- I/O Device 1 -->
+      <rect x="100" y="130" width="110" height="50" rx="8" fill="#1a2235" stroke="#10b981" stroke-width="1.5"/>
+      <text x="155" y="161" font-size="12" fill="#10b981" text-anchor="middle" font-family="Sora,sans-serif">I/O Device 1</text>
+      <line x1="155" y1="110" x2="155" y2="130" stroke="#10b981" stroke-width="2"/>
+
+      <!-- dots -->
+      <text x="290" y="162" font-size="18" fill="#94a3b8" text-anchor="middle" font-family="Sora,sans-serif">· · ·</text>
+
+      <!-- I/O Device n -->
+      <rect x="490" y="130" width="110" height="50" rx="8" fill="#1a2235" stroke="#10b981" stroke-width="1.5"/>
+      <text x="545" y="161" font-size="12" fill="#10b981" text-anchor="middle" font-family="Sora,sans-serif">I/O Device n</text>
+      <line x1="545" y1="110" x2="545" y2="130" stroke="#10b981" stroke-width="2"/>
+
+      <!-- labels -->
+      <text x="30" y="40" font-size="10" fill="#475569" font-family="Space Mono,monospace">ADDRESS</text>
+      <text x="30" y="55" font-size="10" fill="#475569" font-family="Space Mono,monospace">DATA</text>
+      <text x="30" y="70" font-size="10" fill="#475569" font-family="Space Mono,monospace">CONTROL</text>
+    </svg>
+  </div>
+
+  <h3>Bus Line Types</h3>
+  <div class="card-grid">
+    <div class="card">
+      <span class="badge badge-cyan">Address Lines</span>
+      <p style="margin-top:8px">Carry the address of the memory location or I/O device being accessed.</p>
+    </div>
+    <div class="card">
+      <span class="badge badge-amber">Data Lines</span>
+      <p style="margin-top:8px">Carry the actual data, commands, or addresses between source and destination.</p>
+    </div>
+    <div class="card">
+      <span class="badge badge-purple">Control Lines</span>
+      <p style="margin-top:8px">Signal requests, acknowledgments, and indicate type of transaction on data lines.</p>
+    </div>
+  </div>
+
+  <h3>Synchronous vs Asynchronous Bus</h3>
+  <div class="compare-grid">
+    <div class="card">
+      <p><span class="badge badge-cyan">Synchronous</span></p>
+      <p style="margin-top:10px">Includes a <strong>clock signal</strong> in control lines. All devices run at the <strong>same clock rate</strong>. Fast and simple to implement.</p>
+      <p style="margin-top:8px;color:var(--accent3)">⚠ Limitations: All devices must run at same rate. Cannot be long (clock skew problem).</p>
+    </div>
+    <div class="card">
+      <p><span class="badge badge-green">Asynchronous</span></p>
+      <p style="margin-top:10px"><strong>Not clocked.</strong> Supports wide variety of devices, can be lengthy. Uses <strong>handshaking protocol</strong> to coordinate data transfer.</p>
+      <p style="margin-top:8px;color:var(--accent4)">✓ No clock skew issues. Works with slow and fast devices.</p>
+    </div>
+  </div>
+
+  <h3>Asynchronous Handshaking — 3 Control Lines</h3>
+  <div class="card">
+    <div class="card-grid" style="margin-bottom:0">
+      <div>
+        <p><strong>ReadReq</strong> — I/O device asserts this to request a memory read. Address placed on data lines simultaneously.</p>
+      </div>
+      <div>
+        <p><strong>DataRdy</strong> — Asserted to signal that data word is now ready on data lines. Asserted by both memory and I/O device at different steps.</p>
+      </div>
+      <div>
+        <p><strong>Ack</strong> — Used to acknowledge either ReadReq or DataRdy signal from the other party.</p>
+      </div>
+    </div>
+  </div>
+
+  <h3>Handshaking Steps (Read Operation)</h3>
+  <ol class="steps">
+    <li>Memory sees <strong>ReadReq</strong>; reads address from data bus; raises <strong>Ack</strong> to confirm.</li>
+    <li>Ack is high → I/O releases ReadReq and data lines.</li>
+    <li>Memory sees ReadReq is low → drops Ack. (Memory read now in progress.)</li>
+    <li>Memory has data ready → places data on data lines; raises <strong>DataRdy</strong>.</li>
+    <li>I/O device sees DataRdy → reads data from bus; raises <strong>Ack</strong>.</li>
+    <li>Memory drops DataRdy; releases data lines.</li>
+    <li>I/O device sees DataRdy go low → drops Ack. <strong>Transfer complete!</strong></li>
+  </ol>
+
+  <h3>Bus Types Comparison — Firewire vs USB 2.0</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Characteristic</th><th>FireWire (IEEE 1394)</th><th>USB 2.0</th></tr></thead>
+      <tbody>
+        <tr><td>Bus Type</td><td>I/O</td><td>I/O</td></tr>
+        <tr><td>Basic Data Width</td><td>4 signals</td><td>2 signals</td></tr>
+        <tr><td>Clocking</td><td>Asynchronous</td><td>Asynchronous</td></tr>
+        <tr><td>Peak Bandwidth</td><td>50 MB/s (400) or 100 MB/s (500)</td><td>0.2 – 60 MB/s</td></tr>
+        <tr><td>Hot Pluggable</td><td>Yes</td><td>Yes</td></tr>
+        <tr><td>Max Devices</td><td>63</td><td>127</td></tr>
+        <tr><td>Max Length</td><td>4.5 m</td><td>5 m</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════ 3. I/O INTERFACE ══════════════════════════════════ -->
+<section class="section" id="io-interface">
+  <div class="section-header">
+    <div class="section-num">03</div>
+    <h2>I/O Interface</h2>
+  </div>
+
+  <div class="card">
+    <p>The <strong>I/O Interface</strong> is the hardware circuit that connects an I/O device to the bus. The processor places a unique device address on the address lines; the device that recognizes the address responds.</p>
+  </div>
+
+  <h3>Components of I/O Interface</h3>
+  <div class="card-grid">
+    <div class="card"><p><strong>Address Decoder</strong> — Identifies if the address on the bus belongs to this device.</p></div>
+    <div class="card"><p><strong>Control Circuits</strong> — Handles read/write commands from the processor.</p></div>
+    <div class="card"><p><strong>Data Registers</strong> — <code style="color:var(--accent)">DATAIN</code> (input buffer), <code style="color:var(--accent)">DATAOUT</code> (output buffer).</p></div>
+    <div class="card"><p><strong>Status Registers</strong> — Contains flag bits like <code style="color:var(--accent)">SIN</code>, <code style="color:var(--accent)">SOUT</code>, <code style="color:var(--accent)">KIRQ</code>, <code style="color:var(--accent)">DIRQ</code>.</p></div>
+  </div>
+
+  <h3>Status Register Flags</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Flag</th><th>Name</th><th>Meaning</th></tr></thead>
+      <tbody>
+        <tr><td><code style="color:var(--accent)">SIN</code></td><td>Status Input</td><td>Set when keyboard has data ready to be read</td></tr>
+        <tr><td><code style="color:var(--accent)">SOUT</code></td><td>Status Output</td><td>Set when display is ready to accept a character</td></tr>
+        <tr><td><code style="color:var(--accent)">KIRQ</code></td><td>Keyboard IRQ</td><td>Keyboard interrupt request flag</td></tr>
+        <tr><td><code style="color:var(--accent)">DIRQ</code></td><td>Display IRQ</td><td>Display interrupt request flag</td></tr>
+        <tr><td><code style="color:var(--accent)">KEN</code></td><td>Keyboard Enable</td><td>Enable keyboard interrupts</td></tr>
+        <tr><td><code style="color:var(--accent)">DEN</code></td><td>Display Enable</td><td>Enable display interrupts</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- I/O Interface Diagram -->
+  <div class="diagram">
+    <svg viewBox="0 0 650 180" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:650px;display:block;margin:auto">
+      <!-- Bus (top) -->
+      <rect x="0" y="10" width="650" height="8" rx="4" fill="#00e5ff" opacity="0.6"/>
+      <text x="320" y="8" font-size="10" fill="#00e5ff" text-anchor="middle" font-family="Space Mono,monospace">SYSTEM BUS (Address / Data / Control)</text>
+
+      <!-- Address Decoder -->
+      <rect x="30" y="40" width="130" height="50" rx="8" fill="#1a2235" stroke="#7c3aed" stroke-width="1.5"/>
+      <text x="95" y="70" font-size="11" fill="#a78bfa" text-anchor="middle" font-family="Sora,sans-serif">Address Decoder</text>
+      <line x1="95" y1="18" x2="95" y2="40" stroke="#7c3aed" stroke-width="1.5" stroke-dasharray="4,2"/>
+
+      <!-- Control Circuits -->
+      <rect x="210" y="40" width="130" height="50" rx="8" fill="#1a2235" stroke="#00e5ff" stroke-width="1.5"/>
+      <text x="275" y="70" font-size="11" fill="#00e5ff" text-anchor="middle" font-family="Sora,sans-serif">Control Circuits</text>
+      <line x1="275" y1="18" x2="275" y2="40" stroke="#00e5ff" stroke-width="1.5" stroke-dasharray="4,2"/>
+
+      <!-- Data & Status Registers -->
+      <rect x="390" y="40" width="150" height="50" rx="8" fill="#1a2235" stroke="#f59e0b" stroke-width="1.5"/>
+      <text x="465" y="63" font-size="11" fill="#f59e0b" text-anchor="middle" font-family="Sora,sans-serif">Data &amp; Status</text>
+      <text x="465" y="79" font-size="11" fill="#f59e0b" text-anchor="middle" font-family="Sora,sans-serif">Registers</text>
+      <line x1="465" y1="18" x2="465" y2="40" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="4,2"/>
+
+      <!-- Internal bus (middle) -->
+      <rect x="30" y="105" width="510" height="6" rx="3" fill="#475569" opacity="0.8"/>
+      <text x="285" y="103" font-size="9" fill="#475569" text-anchor="middle" font-family="Space Mono,monospace">INTERNAL INTERFACE BUS</text>
+      <line x1="95" y1="90" x2="95" y2="105" stroke="#7c3aed" stroke-width="1.5"/>
+      <line x1="275" y1="90" x2="275" y2="105" stroke="#00e5ff" stroke-width="1.5"/>
+      <line x1="465" y1="90" x2="465" y2="105" stroke="#f59e0b" stroke-width="1.5"/>
+
+      <!-- I/O Device -->
+      <rect x="185" y="130" width="200" height="45" rx="8" fill="#1a2235" stroke="#10b981" stroke-width="1.5"/>
+      <text x="285" y="158" font-size="12" fill="#10b981" text-anchor="middle" font-family="Sora,sans-serif">I/O Device(s)</text>
+      <line x1="285" y1="111" x2="285" y2="130" stroke="#10b981" stroke-width="2"/>
+    </svg>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════ 4. I/O MECHANISMS OVERVIEW ══════════════════════════════════ -->
+<section class="section" id="mechanisms">
+  <div class="section-header">
+    <div class="section-num">04</div>
+    <h2>I/O Mechanisms — Big Picture</h2>
+  </div>
+
+  <div class="card highlight-card">
+    <p>There are <strong>4 I/O mechanisms</strong>, each progressively offloading work from the CPU:</p>
+  </div>
+
+  <div class="card-grid">
+    <div class="card warn-card">
+      <p><span class="badge badge-amber">1</span> <strong>Memory-Mapped I/O</strong></p>
+      <p style="margin-top:8px">I/O devices share the same address space as memory. Accessed using normal memory instructions.</p>
+    </div>
+    <div class="card warn-card">
+      <p><span class="badge badge-amber">2</span> <strong>Programmed I/O (Polling)</strong></p>
+      <p style="margin-top:8px">CPU directly controls I/O, constantly checking status (polling). Wastes CPU time.</p>
+    </div>
+    <div class="card success-card">
+      <p><span class="badge badge-green">3</span> <strong>Interrupt-Driven I/O</strong></p>
+      <p style="margin-top:8px">I/O device signals CPU when ready. CPU doesn't waste time waiting — does other work.</p>
+    </div>
+    <div class="card success-card">
+      <p><span class="badge badge-green">4</span> <strong>DMA (Direct Memory Access)</strong></p>
+      <p style="margin-top:8px">Special controller transfers data directly between device and memory without CPU intervention. Best for bulk transfers.</p>
+    </div>
+  </div>
+
+  <!-- Efficiency progression -->
+  <div class="diagram">
+    <p style="color:var(--muted);font-size:12px;margin-bottom:16px;font-family:'Space Mono',monospace">CPU EFFICIENCY PROGRESSION →</p>
+    <div style="display:flex;gap:0;align-items:center;flex-wrap:wrap">
+      <div style="background:rgba(239,68,68,0.2);border:1px solid rgba(239,68,68,0.4);border-radius:8px;padding:12px 18px;font-size:12px;color:#fca5a5;text-align:center;flex:1;min-width:120px">
+        <div style="font-size:20px;margin-bottom:4px">😴</div>
+        Programmed I/O<br><span style="font-size:10px;color:#94a3b8">CPU 100% busy waiting</span>
+      </div>
+      <div style="color:var(--accent3);padding:0 10px;font-size:20px">→</div>
+      <div style="background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.3);border-radius:8px;padding:12px 18px;font-size:12px;color:#fcd34d;text-align:center;flex:1;min-width:120px">
+        <div style="font-size:20px;margin-bottom:4px">🔔</div>
+        Interrupt I/O<br><span style="font-size:10px;color:#94a3b8">CPU interrupted only when needed</span>
+      </div>
+      <div style="color:var(--accent3);padding:0 10px;font-size:20px">→</div>
+      <div style="background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);border-radius:8px;padding:12px 18px;font-size:12px;color:#6ee7b7;text-align:center;flex:1;min-width:120px">
+        <div style="font-size:20px;margin-bottom:4px">🚀</div>
+        DMA<br><span style="font-size:10px;color:#94a3b8">CPU barely involved</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════ 5. MEMORY-MAPPED I/O ══════════════════════════════════ -->
+<section class="section" id="memory-mapped">
+  <div class="section-header">
+    <div class="section-num">05</div>
+    <h2>Memory-Mapped I/O</h2>
+  </div>
+
+  <div class="card">
+    <p><strong>Key Idea:</strong> I/O devices and Memory share the <strong>same address space</strong>. Portions of the address space are assigned to I/O devices. Reading/writing to those addresses sends commands to the device.</p>
+    <p style="margin-top:10px">Uses the <strong>same address bus always</strong> — no separate I/O instructions needed. Normal <code style="color:var(--accent)">Move</code> instructions work for I/O.</p>
+  </div>
+
+  <!-- Memory Map Visual -->
+  <h3>Address Space Layout</h3>
+  <div class="mem-map">
+    <div class="mem-row mem-ram"><span class="mem-addr">0x0000</span><span class="mem-label">Main Memory (RAM)</span></div>
+    <div class="mem-row mem-ram"><span class="mem-addr">...</span><span class="mem-label">Main Memory continues...</span></div>
+    <div class="mem-row mem-io"><span class="mem-addr">DATAIN</span><span class="mem-label">Keyboard Input Buffer ← I/O Device</span></div>
+    <div class="mem-row mem-io"><span class="mem-addr">DATAOUT</span><span class="mem-label">Display Output Buffer ← I/O Device</span></div>
+    <div class="mem-row mem-io"><span class="mem-addr">STATUS</span><span class="mem-label">Status Register (SIN, SOUT flags)</span></div>
+    <div class="mem-row mem-io"><span class="mem-addr">CONTROL</span><span class="mem-label">Control Register (KEN, DEN bits)</span></div>
+    <div class="mem-row mem-ram"><span class="mem-addr">0xFFFF</span><span class="mem-label">Top of Address Space</span></div>
+  </div>
+
+  <h3>Example Instructions</h3>
+  <div class="code-block">
+<span class="comment">; Read keyboard character into register R0</span>
+<span class="instr">Move</span>  DATAIN, R0       <span class="comment">; reads from keyboard buffer → R0</span>
+
+<span class="comment">; Send character from R0 to display</span>
+<span class="instr">Move</span>  R0, DATAOUT      <span class="comment">; writes R0 → display output buffer</span>
+  </div>
+
+  <div class="card warn-card">
+    <p>🔐 <strong>Security:</strong> User programs are <strong>prevented</strong> from accessing I/O device addresses directly. The OS uses address translation to protect these addresses — only kernel/supervisor mode can access them.</p>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════ 6. PROGRAMMED I/O ══════════════════════════════════ -->
+<section class="section" id="programmed">
+  <div class="section-header">
+    <div class="section-num">06</div>
+    <h2>Programmed I/O (Polling)</h2>
+  </div>
+
+  <div class="card">
+    <p><strong>Concept:</strong> The CPU has <strong>direct control</strong> over all I/O operations. It repeatedly checks (polls) the status of the I/O device, waiting for it to be ready. This is called <strong>busy-waiting</strong> or <strong>polling</strong>.</p>
+  </div>
+
+  <h3>Polling Flow</h3>
+  <div class="diagram" style="padding:20px">
+    <div style="display:flex;flex-direction:column;align-items:center;gap:0">
+      <div class="flow-box active" style="margin-bottom:0">Issue Read Command<br><span style="font-size:10px;color:#94a3b8">CPU → I/O</span></div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-box">Read Status of I/O Module<br><span style="font-size:10px;color:#94a3b8">I/O → CPU</span></div>
+      <div class="flow-arrow">↓</div>
+      <div style="display:flex;align-items:center;gap:20px">
+        <div class="flow-box decision" style="width:100px;height:60px;display:flex;align-items:center;justify-content:center;font-size:11px">Check Status</div>
+        <div style="display:flex;flex-direction:column;align-items:flex-start;gap:4px">
+          <span style="font-size:11px;color:var(--accent3)">Not Ready → loops back to Read Status</span>
+          <span style="font-size:11px;color:#ef4444">Error → Error Condition</span>
+          <span style="font-size:11px;color:var(--accent4)">Ready → Read Word from I/O Module</span>
+        </div>
+      </div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-box">Write Word into Memory<br><span style="font-size:10px;color:#94a3b8">CPU → Memory</span></div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-box decision" style="width:80px;height:50px;display:flex;align-items:center;justify-content:center;font-size:11px">Done?</div>
+    </div>
+  </div>
+
+  <h3>ISA Assembly Example — Keyboard to Display</h3>
+  <div class="code-block">
+<span class="comment">; Read one line from keyboard, store in buffer, echo to display</span>
+
+         <span class="instr">Move</span>   #LINE, R0       <span class="comment">; Initialize memory pointer</span>
+
+<span class="label">WAITK:</span>  <span class="instr">TestBit</span> #0, STATUS   <span class="comment">; Test SIN flag (bit 0)</span>
+         <span class="instr">Branch=0</span> WAITK       <span class="comment">; If SIN=0, keyboard not ready, wait</span>
+         <span class="instr">Move</span>   DATAIN, R1    <span class="comment">; Read character from keyboard</span>
+
+<span class="label">WAITD:</span>  <span class="instr">TestBit</span> #1, STATUS   <span class="comment">; Test SOUT flag (bit 1)</span>
+         <span class="instr">Branch=0</span> WAITD       <span class="comment">; If SOUT=0, display not ready, wait</span>
+         <span class="instr">Move</span>   R1, DATAOUT   <span class="comment">; Send character to display</span>
+         <span class="instr">Move</span>   R1, (R0)+     <span class="comment">; Store character, advance pointer</span>
+         <span class="instr">Compare</span> #$0D, R1    <span class="comment">; Check if Carriage Return</span>
+         <span class="instr">Branch≠0</span> WAITK      <span class="comment">; If not CR, get next character</span>
+         <span class="instr">Move</span>   #$0A, DATAOUT <span class="comment">; Send Line Feed</span>
+         <span class="instr">Call</span>   PROCESS       <span class="comment">; Process the input line</span>
+  </div>
+
+  <div class="card warn-card">
+    <p>⚠ <strong>Problem with Polling:</strong> The processor may poll the status register hundreds of thousands of times before the slow I/O device is ready. This <strong>wastes CPU time</strong> that could be used for useful computation.</p>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════ 7. INTERRUPTS ══════════════════════════════════ -->
+<section class="section" id="interrupts">
+  <div class="section-header">
+    <div class="section-num">07</div>
+    <h2>Interrupt-Driven I/O</h2>
+  </div>
+
+  <div class="card highlight-card">
+    <p><strong>Key Idea:</strong> Instead of the CPU constantly checking the device, the <strong>device notifies the CPU</strong> when it needs attention by raising an interrupt signal. The CPU can do useful work in the meantime.</p>
+    <p style="margin-top:8px"><strong>Interrupt Latency</strong> = time to save status + restore context before executing ISR (Interrupt Service Routine).</p>
+  </div>
+
+  <!-- Interrupt flow diagram -->
+  <div class="diagram">
+    <svg viewBox="0 0 700 200" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:700px;display:block;margin:auto">
+      <!-- Program 1 column -->
+      <rect x="60" y="10" width="160" height="180" rx="6" fill="rgba(124,58,237,0.08)" stroke="#7c3aed" stroke-width="1"/>
+      <text x="140" y="28" font-size="11" fill="#a78bfa" text-anchor="middle" font-family="Sora,sans-serif">Program 1</text>
+      <text x="140" y="43" font-size="9" fill="#94a3b8" text-anchor="middle" font-family="Space Mono,monospace">COMPUTE routine</text>
+      <rect x="75" y="50" width="130" height="10" rx="2" fill="#7c3aed" opacity="0.5"/>
+      <rect x="75" y="70" width="130" height="10" rx="2" fill="#7c3aed" opacity="0.4"/>
+      <text x="20" y="97" font-size="10" fill="#f59e0b" font-family="Sora,sans-serif">Interrupt</text>
+      <text x="30" y="110" font-size="10" fill="#f59e0b" font-family="Sora,sans-serif">here →</text>
+      <rect x="75" y="90" width="130" height="10" rx="2" fill="#f59e0b" opacity="0.7"/>
+      <rect x="75" y="130" width="130" height="10" rx="2" fill="#7c3aed" opacity="0.4"/>
+      <rect x="75" y="160" width="130" height="10" rx="2" fill="#7c3aed" opacity="0.3"/>
+
+      <!-- Program 2 (ISR) column -->
+      <rect x="470" y="10" width="160" height="180" rx="6" fill="rgba(0,229,255,0.06)" stroke="#00e5ff" stroke-width="1"/>
+      <text x="550" y="28" font-size="11" fill="#00e5ff" text-anchor="middle" font-family="Sora,sans-serif">Program 2</text>
+      <text x="550" y="43" font-size="9" fill="#94a3b8" text-anchor="middle" font-family="Space Mono,monospace">ISR / PRINT routine</text>
+      <rect x="485" y="55" width="130" height="10" rx="2" fill="#00e5ff" opacity="0.5"/>
+      <rect x="485" y="80" width="130" height="10" rx="2" fill="#00e5ff" opacity="0.4"/>
+      <rect x="485" y="120" width="130" height="10" rx="2" fill="#00e5ff" opacity="0.35"/>
+      <rect x="485" y="155" width="130" height="10" rx="2" fill="#00e5ff" opacity="0.3"/>
+
+      <!-- Arrows -->
+      <path d="M 205 95 Q 340 80 470 60" stroke="#f59e0b" stroke-width="2" fill="none" marker-end="url(#arr)"/>
+      <path d="M 470 160 Q 340 155 205 135" stroke="#10b981" stroke-width="2" fill="none" marker-end="url(#arr2)"/>
+      <text x="310" y="72" font-size="9" fill="#f59e0b" text-anchor="middle" font-family="Sora,sans-serif">jump to ISR</text>
+      <text x="310" y="165" font-size="9" fill="#10b981" text-anchor="middle" font-family="Sora,sans-serif">return from ISR</text>
+
+      <defs>
+        <marker id="arr" markerWidth="8" markerHeight="6" refX="6" refY="3" orient="auto">
+          <polygon points="0 0, 8 3, 0 6" fill="#f59e0b"/>
+        </marker>
+        <marker id="arr2" markerWidth="8" markerHeight="6" refX="6" refY="3" orient="auto">
+          <polygon points="0 0, 8 3, 0 6" fill="#10b981"/>
+        </marker>
+      </defs>
+    </svg>
+  </div>
+
+  <h3>Interrupt Handling Sequence</h3>
+  <ol class="steps">
+    <li>The I/O device raises an <strong>interrupt request</strong> signal (INTR).</li>
+    <li>Processor finishes current instruction, then <strong>suspends current program</strong>.</li>
+    <li>Interrupts <strong>disabled</strong> (to prevent nested interrupts during ISR setup).</li>
+    <li>Device informed its request is recognized; it <strong>deactivates the interrupt signal</strong>.</li>
+    <li>Action requested is performed by the <strong>Interrupt Service Routine (ISR)</strong>.</li>
+    <li>Interrupts <strong>re-enabled</strong>; interrupted program <strong>resumes</strong>.</li>
+  </ol>
+
+  <h3>Handling Multiple Devices — 4 Techniques</h3>
+  <div class="card-grid">
+    <div class="card">
+      <p><span class="badge badge-cyan">1. Polling</span></p>
+      <p style="margin-top:8px">ISR checks IRQ bit of each device in order. First device with IRQ set gets serviced. Simple but slow — checks all devices even if most aren't requesting.</p>
+    </div>
+    <div class="card">
+      <p><span class="badge badge-amber">2. Vectored Interrupts</span></p>
+      <p style="margin-top:8px">Device sends its identity (Interrupt Vector) to processor. CPU uses vector to jump directly to the correct ISR address. <strong>Faster — no polling needed.</strong></p>
+    </div>
+    <div class="card">
+      <p><span class="badge badge-purple">3. Interrupt Nesting</span></p>
+      <p style="margin-top:8px">High-priority interrupt can pre-empt the ISR of a low-priority interrupt. Devices organized in priority levels. Processor only interrupted by higher-priority device.</p>
+    </div>
+    <div class="card">
+      <p><span class="badge badge-green">4. Daisy Chaining</span></p>
+      <p style="margin-top:8px">INTR line is common; INTA (acknowledge) propagates serially through devices. Device closest to processor gets highest priority. Risk: <strong>starvation</strong> for low-priority devices.</p>
+    </div>
+  </div>
+
+  <h3>Daisy Chain Structure</h3>
+  <div class="priority-chain">
+    <div class="pc-box" style="border-color:#7c3aed;color:#a78bfa;background:rgba(124,58,237,0.12)">Processor</div>
+    <div class="pc-arrow">→ INTA →</div>
+    <div class="pc-box" style="border-color:#00e5ff;color:#00e5ff;background:rgba(0,229,255,0.08)">Device 1<br><span style="font-size:10px;color:var(--accent4)">Highest Priority</span></div>
+    <div class="pc-arrow">→</div>
+    <div class="pc-box" style="border-color:#00e5ff;color:#00e5ff;background:rgba(0,229,255,0.08)">Device 2</div>
+    <div class="pc-arrow">→</div>
+    <div class="pc-box" style="border-color:#94a3b8;color:#94a3b8;background:rgba(148,163,184,0.06)">Device n<br><span style="font-size:10px;color:#ef4444">Lowest Priority</span></div>
+  </div>
+  <div class="card warn-card" style="margin-top:10px">
+    <p>All devices share <strong>one INTR line</strong> (OR-wired). INTA propagates in chain. Device closest to processor gets priority. Combine with Interrupt Nesting → <strong>Daisy Chaining with Priority Groups</strong>.</p>
+  </div>
+
+  <h3>Enabling/Disabling Interrupts — 3 Methods</h3>
+  <div class="card-grid">
+    <div class="card"><p><strong>1. Ignore Interrupt</strong> — Processor hardware ignores interrupt until first ISR instruction completes. Interrupt disable instruction used after first ISR instruction.</p></div>
+    <div class="card"><p><strong>2. Disable Interrupts</strong> — Processor automatically disables interrupts at start of ISR. Interrupt-enable bit set to 0. Restored when ISR returns.</p></div>
+    <div class="card"><p><strong>3. Edge-Triggered Line</strong> — Processor receives only one request regardless of how long line stays active. No separate interrupt disable needed.</p></div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════ 8. DMA ══════════════════════════════════ -->
+<section class="section" id="dma">
+  <div class="section-header">
+    <div class="section-num">08</div>
+    <h2>Direct Memory Access (DMA)</h2>
+  </div>
+
+  <div class="card highlight-card">
+    <p><strong>Problem with Interrupts:</strong> Still too much CPU overhead for bulk data transfers (e.g., copying a file from disk). Every byte/word requires an interrupt and CPU involvement.</p>
+    <p style="margin-top:10px"><strong>DMA Solution:</strong> A special <strong>DMA Controller</strong> takes over the bus and transfers data <em>directly</em> between the device and main memory, with <strong>minimal CPU involvement</strong>.</p>
+  </div>
+
+  <h3>DMA Controller Registers</h3>
+  <div class="card-grid">
+    <div class="card"><p><strong>Starting Address Register</strong> — Memory address where block transfer begins.</p></div>
+    <div class="card"><p><strong>Word Count Register</strong> — Number of words to transfer.</p></div>
+    <div class="card"><p><strong>Status & Control Register</strong> — Mode (R/W), IRQ flag, IE (interrupt enable), Done flag.</p></div>
+  </div>
+
+  <h3>DMA Transfer Process</h3>
+  <ol class="steps">
+    <li>CPU sends DMA controller: starting address, word count, R/W mode, and start signal.</li>
+    <li>DMA controller takes bus control (<strong>"steals" cycles</strong> from CPU).</li>
+    <li>DMA transfers entire block of data directly between device ↔ memory.</li>
+    <li>DMA controller sends an <strong>interrupt to CPU</strong> when transfer is complete.</li>
+    <li>CPU resumes normal operation.</li>
+  </ol>
+
+  <!-- DMA System Diagram -->
+  <div class="diagram">
+    <svg viewBox="0 0 660 180" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:660px;display:block;margin:auto">
+      <!-- System Bus -->
+      <rect x="20" y="85" width="620" height="10" rx="5" fill="#00e5ff" opacity="0.7"/>
+      <text x="330" y="80" font-size="10" fill="#00e5ff" text-anchor="middle" font-family="Space Mono,monospace">SYSTEM BUS</text>
+
+      <!-- Processor -->
+      <rect x="30" y="20" width="100" height="50" rx="8" fill="#1a2235" stroke="#a78bfa" stroke-width="1.5"/>
+      <text x="80" y="50" font-size="11" fill="#a78bfa" text-anchor="middle" font-family="Sora,sans-serif">Processor</text>
+      <line x1="80" y1="70" x2="80" y2="85" stroke="#a78bfa" stroke-width="1.5"/>
+
+      <!-- Main Memory -->
+      <rect x="530" y="20" width="110" height="50" rx="8" fill="#1a2235" stroke="#10b981" stroke-width="1.5"/>
+      <text x="585" y="50" font-size="11" fill="#10b981" text-anchor="middle" font-family="Sora,sans-serif">Main Memory</text>
+      <line x1="585" y1="70" x2="585" y2="85" stroke="#10b981" stroke-width="1.5"/>
+
+      <!-- DMA Controllers -->
+      <rect x="165" y="110" width="120" height="50" rx="8" fill="rgba(0,229,255,0.12)" stroke="#00e5ff" stroke-width="1.5"/>
+      <text x="225" y="133" font-size="10" fill="#00e5ff" text-anchor="middle" font-family="Sora,sans-serif">Disk/DMA</text>
+      <text x="225" y="148" font-size="10" fill="#00e5ff" text-anchor="middle" font-family="Sora,sans-serif">Controller</text>
+      <line x1="225" y1="95" x2="225" y2="110" stroke="#00e5ff" stroke-width="1.5"/>
+
+      <rect x="335" y="110" width="110" height="50" rx="8" fill="rgba(0,229,255,0.12)" stroke="#00e5ff" stroke-width="1.5"/>
+      <text x="390" y="133" font-size="10" fill="#00e5ff" text-anchor="middle" font-family="Sora,sans-serif">DMA</text>
+      <text x="390" y="148" font-size="10" fill="#00e5ff" text-anchor="middle" font-family="Sora,sans-serif">Controller</text>
+      <line x1="390" y1="95" x2="390" y2="110" stroke="#00e5ff" stroke-width="1.5"/>
+
+      <!-- Non-DMA devices -->
+      <rect x="460" y="110" width="70" height="50" rx="8" fill="#1a2235" stroke="#475569" stroke-width="1"/>
+      <text x="495" y="140" font-size="10" fill="#94a3b8" text-anchor="middle" font-family="Sora,sans-serif">Printer</text>
+      <line x1="495" y1="95" x2="495" y2="110" stroke="#475569" stroke-width="1"/>
+
+      <!-- Devices under DMA -->
+      <text x="183" y="175" font-size="9" fill="#94a3b8" font-family="Sora,sans-serif">Disk 1 | Disk 2</text>
+      <text x="360" y="175" font-size="9" fill="#94a3b8" font-family="Sora,sans-serif">Network</text>
+
+      <!-- DMA label -->
+      <text x="280" y="175" font-size="9" fill="#f59e0b" font-family="Space Mono,monospace">←DMA direct path to Memory→</text>
+    </svg>
+  </div>
+
+  <h3>DMA Transfer Modes</h3>
+  <div class="compare-grid">
+    <div class="card">
+      <p><span class="badge badge-amber">Cycle Stealing</span></p>
+      <p style="margin-top:8px">DMA "steals" one memory cycle at a time from the processor. Processor and DMA accesses are <strong>interwoven</strong>. DMA has higher bus priority.</p>
+    </div>
+    <div class="card">
+      <p><span class="badge badge-purple">Burst / Block Mode</span></p>
+      <p style="margin-top:8px">DMA controller gets <strong>exclusive access</strong> to main memory for entire block transfer without interruption. Faster but processor locked out longer.</p>
+    </div>
+  </div>
+
+  <div class="card warn-card">
+    <p>⚠ <strong>DMA Conflicts:</strong> (1) Processor vs DMA controller — both want bus simultaneously. (2) Two DMA controllers both trying to access memory at same time. Resolved by <strong>Bus Arbitration</strong>.</p>
+  </div>
+
+  <h3>DMA vs Interrupt Breakpoints in Instruction Cycle</h3>
+  <div class="diagram" style="overflow-x:auto">
+    <svg viewBox="0 0 680 130" xmlns="http://www.w3.org/2000/svg" style="width:100%;min-width:600px;display:block;margin:auto">
+      <!-- Timeline -->
+      <rect x="20" y="30" width="640" height="40" rx="0" fill="none" stroke="#475569" stroke-width="1"/>
+      <text x="340" y="22" font-size="10" fill="#94a3b8" text-anchor="middle" font-family="Space Mono,monospace">INSTRUCTION CYCLE (6 Processor Cycles)</text>
+
+      <!-- Cycle boxes -->
+      <rect x="20" y="30" width="106" height="40" fill="rgba(124,58,237,0.12)" stroke="#7c3aed" stroke-width="1"/>
+      <text x="73" y="53" font-size="9" fill="#a78bfa" text-anchor="middle" font-family="Sora,sans-serif">Fetch</text>
+      <text x="73" y="65" font-size="9" fill="#a78bfa" text-anchor="middle" font-family="Sora,sans-serif">Instruction</text>
+
+      <rect x="126" y="30" width="107" height="40" fill="rgba(124,58,237,0.08)" stroke="#7c3aed" stroke-width="1"/>
+      <text x="179" y="53" font-size="9" fill="#a78bfa" text-anchor="middle" font-family="Sora,sans-serif">Decode</text>
+      <text x="179" y="65" font-size="9" fill="#a78bfa" text-anchor="middle" font-family="Sora,sans-serif">Instruction</text>
+
+      <rect x="233" y="30" width="107" height="40" fill="rgba(0,229,255,0.1)" stroke="#00e5ff" stroke-width="1.5"/>
+      <text x="286" y="53" font-size="9" fill="#00e5ff" text-anchor="middle" font-family="Sora,sans-serif">Fetch</text>
+      <text x="286" y="65" font-size="9" fill="#00e5ff" text-anchor="middle" font-family="Sora,sans-serif">Operand</text>
+
+      <rect x="340" y="30" width="107" height="40" fill="rgba(124,58,237,0.08)" stroke="#7c3aed" stroke-width="1"/>
+      <text x="393" y="53" font-size="9" fill="#a78bfa" text-anchor="middle" font-family="Sora,sans-serif">Execute</text>
+      <text x="393" y="65" font-size="9" fill="#a78bfa" text-anchor="middle" font-family="Sora,sans-serif">Instruction</text>
+
+      <rect x="447" y="30" width="107" height="40" fill="rgba(0,229,255,0.1)" stroke="#00e5ff" stroke-width="1.5"/>
+      <text x="500" y="53" font-size="9" fill="#00e5ff" text-anchor="middle" font-family="Sora,sans-serif">Store</text>
+      <text x="500" y="65" font-size="9" fill="#00e5ff" text-anchor="middle" font-family="Sora,sans-serif">Result</text>
+
+      <rect x="554" y="30" width="106" height="40" fill="rgba(245,158,11,0.12)" stroke="#f59e0b" stroke-width="1.5"/>
+      <text x="607" y="53" font-size="9" fill="#f59e0b" text-anchor="middle" font-family="Sora,sans-serif">Process</text>
+      <text x="607" y="65" font-size="9" fill="#f59e0b" text-anchor="middle" font-family="Sora,sans-serif">Interrupt</text>
+
+      <!-- DMA breakpoints -->
+      <path d="M 73 70 L 73 95 L 286 95 L 286 70" stroke="#00e5ff" stroke-width="1.5" fill="none" stroke-dasharray="3,2"/>
+      <path d="M 500 70 L 500 95 L 286 95" stroke="#00e5ff" stroke-width="1.5" fill="none" stroke-dasharray="3,2"/>
+      <text x="280" y="110" font-size="9" fill="#00e5ff" text-anchor="middle" font-family="Sora,sans-serif">DMA Breakpoints (memory access cycles)</text>
+
+      <!-- Interrupt breakpoint -->
+      <path d="M 607 70 L 607 95" stroke="#f59e0b" stroke-width="1.5" fill="none" stroke-dasharray="3,2"/>
+      <text x="607" y="110" font-size="9" fill="#f59e0b" text-anchor="middle" font-family="Sora,sans-serif">Interrupt BP</text>
+    </svg>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════ 9. BUS ARBITRATION ══════════════════════════════════ -->
+<section class="section" id="arbitration">
+  <div class="section-header">
+    <div class="section-num">09</div>
+    <h2>Bus Arbitration</h2>
+  </div>
+
+  <div class="card">
+    <p><strong>Bus Master</strong> — The device that currently controls the bus and initiates data transfers.</p>
+    <p><strong>Bus Arbitration</strong> — The process of selecting which device gets to become the next bus master when multiple devices want the bus simultaneously.</p>
+  </div>
+
+  <h3>Key Bus Arbitration Signals</h3>
+  <div class="card-grid">
+    <div class="card"><p><strong>BR (Bus Request)</strong> — Open drain line. Any DMA device pulls this low to request bus. Logical OR of all device requests.</p></div>
+    <div class="card"><p><strong>BG (Bus Grant)</strong> — Processor activates this to acknowledge bus request. Propagates in daisy chain to DMA controllers.</p></div>
+    <div class="card"><p><strong>BBSY (Bus Busy)</strong> — Open collector line. Current bus master asserts this to show it's using the bus.</p></div>
+  </div>
+
+  <div class="compare-grid">
+    <div class="card">
+      <p><span class="badge badge-cyan">Centralized Arbitration</span></p>
+      <p style="margin-top:8px">A separate unit (arbiter circuit) controls all bus access. Processor is normally the bus master and grants mastership to DMA. Simple and common.</p>
+    </div>
+    <div class="card">
+      <p><span class="badge badge-purple">Distributed Arbitration</span></p>
+      <p style="margin-top:8px">No central arbiter. All devices participate. Each device has a unique ID (ARB0–ARB3). Device with highest ID wins arbitration by comparing bits on arbitration lines.</p>
+    </div>
+  </div>
+
+  <h3>Distributed Arbitration Example</h3>
+  <div class="card success-card">
+    <p>Device A (ID = 5 = 0101) and Device B (ID = 6 = 0110) both request bus:</p>
+    <ol class="steps" style="margin-top:12px">
+      <li>Both place their IDs on ARB lines: A→0101, B→0110. Combined pattern: <strong>0111</strong></li>
+      <li>Device A compares 0111 to its ID 0101 — detects difference on ARB1 bit.</li>
+      <li>Device A disables its drivers for ARB1 and ARB0.</li>
+      <li>Pattern becomes <strong>0110</strong> — Device B's ID. <strong>Device B wins!</strong></li>
+    </ol>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════ 10. USB ══════════════════════════════════ -->
+<section class="section" id="usb">
+  <div class="section-header">
+    <div class="section-num">10</div>
+    <h2>Universal Serial Bus (USB)</h2>
+  </div>
+
+  <div class="card">
+    <p>USB was designed to provide a <strong>simple, low-cost, easy-to-use</strong> interface that overcomes the limited number of I/O ports. It supports <strong>plug-and-play</strong> operation.</p>
+  </div>
+
+  <h3>USB Speeds</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Version</th><th>Speed Name</th><th>Data Rate</th><th>Use Case</th></tr></thead>
+      <tbody>
+        <tr><td>USB 1.0</td><td>Low Speed</td><td>1.5 Mbit/s</td><td>HID: keyboard, mouse, joystick</td></tr>
+        <tr><td>USB 1.1</td><td>Full Speed</td><td>12 Mbit/s</td><td>Basic USB data rate</td></tr>
+        <tr><td>USB 2.0</td><td>High Speed</td><td>480 Mbit/s</td><td>Drives, cameras (introduced 2001)</td></tr>
+        <tr><td>USB 3.0</td><td>SuperSpeed</td><td>5 Gbit/s</td><td>High-speed storage (~572 MB/s)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>USB Tree Structure</h3>
+  <div class="diagram">
+    <svg viewBox="0 0 500 220" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:500px;display:block;margin:auto">
+      <!-- Host -->
+      <rect x="160" y="5" width="180" height="40" rx="8" fill="#1a2235" stroke="#f59e0b" stroke-width="1.5"/>
+      <text x="250" y="30" font-size="12" fill="#f59e0b" text-anchor="middle" font-family="Sora,sans-serif">Host Computer</text>
+
+      <!-- Root Hub -->
+      <circle cx="250" cy="80" r="22" fill="rgba(0,229,255,0.12)" stroke="#00e5ff" stroke-width="1.5"/>
+      <text x="250" y="77" font-size="9" fill="#00e5ff" text-anchor="middle" font-family="Sora,sans-serif">Root</text>
+      <text x="250" y="89" font-size="9" fill="#00e5ff" text-anchor="middle" font-family="Sora,sans-serif">Hub</text>
+      <line x1="250" y1="45" x2="250" y2="58" stroke="#f59e0b" stroke-width="1.5"/>
+
+      <!-- Hub A -->
+      <circle cx="140" cy="145" r="20" fill="rgba(0,229,255,0.1)" stroke="#00e5ff" stroke-width="1.5"/>
+      <text x="140" y="149" font-size="9" fill="#00e5ff" text-anchor="middle" font-family="Sora,sans-serif">Hub A</text>
+      <line x1="230" y1="97" x2="158" y2="128" stroke="#00e5ff" stroke-width="1.5"/>
+      <text x="180" y="112" font-size="8" fill="#10b981" font-family="Space Mono,monospace">HS</text>
+
+      <!-- Hub B -->
+      <circle cx="360" cy="145" r="20" fill="rgba(0,229,255,0.1)" stroke="#00e5ff" stroke-width="1.5"/>
+      <text x="360" y="149" font-size="9" fill="#00e5ff" text-anchor="middle" font-family="Sora,sans-serif">Hub B</text>
+      <line x1="270" y1="97" x2="342" y2="128" stroke="#00e5ff" stroke-width="1.5"/>
+      <text x="325" y="112" font-size="8" fill="#10b981" font-family="Space Mono,monospace">HS</text>
+
+      <!-- Devices from Hub A -->
+      <rect x="60" y="185" width="60" height="30" rx="6" fill="#1a2235" stroke="#10b981" stroke-width="1"/>
+      <text x="90" y="204" font-size="9" fill="#10b981" text-anchor="middle" font-family="Sora,sans-serif">Device C</text>
+      <line x1="120" y1="163" x2="90" y2="185" stroke="#10b981" stroke-width="1.5"/>
+      <text x="100" y="175" font-size="7" fill="#94a3b8" font-family="Space Mono,monospace">HS</text>
+
+      <rect x="150" y="185" width="60" height="30" rx="6" fill="#1a2235" stroke="#94a3b8" stroke-width="1"/>
+      <text x="180" y="204" font-size="9" fill="#94a3b8" text-anchor="middle" font-family="Sora,sans-serif">Device D</text>
+      <line x1="152" y1="163" x2="180" y2="185" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="3,2"/>
+      <text x="163" y="175" font-size="7" fill="#94a3b8" font-family="Space Mono,monospace">F/LS</text>
+
+      <!-- Devices from Hub B -->
+      <rect x="300" y="185" width="55" height="30" rx="6" fill="#1a2235" stroke="#10b981" stroke-width="1"/>
+      <text x="327" y="200" font-size="8" fill="#10b981" text-anchor="middle" font-family="Sora,sans-serif">I/O</text>
+      <text x="327" y="211" font-size="8" fill="#10b981" text-anchor="middle" font-family="Sora,sans-serif">Dev</text>
+      <line x1="344" y1="163" x2="327" y2="185" stroke="#10b981" stroke-width="1.5"/>
+
+      <rect x="370" y="185" width="55" height="30" rx="6" fill="#1a2235" stroke="#10b981" stroke-width="1"/>
+      <text x="397" y="200" font-size="8" fill="#10b981" text-anchor="middle" font-family="Sora,sans-serif">I/O</text>
+      <text x="397" y="211" font-size="8" fill="#10b981" text-anchor="middle" font-family="Sora,sans-serif">Dev</text>
+      <line x1="376" y1="163" x2="397" y2="185" stroke="#10b981" stroke-width="1.5"/>
+
+      <!-- Legend -->
+      <line x1="20" y1="210" x2="40" y2="210" stroke="#10b981" stroke-width="2"/>
+      <text x="45" y="213" font-size="8" fill="#94a3b8" font-family="Sora,sans-serif">HS = High Speed</text>
+      <line x1="130" y1="210" x2="150" y2="210" stroke="#94a3b8" stroke-width="2" stroke-dasharray="3,2"/>
+      <text x="155" y="213" font-size="8" fill="#94a3b8" font-family="Sora,sans-serif">F/LS = Full/Low Speed</text>
+    </svg>
+  </div>
+
+  <h3>Key USB Principles</h3>
+  <div class="card-grid">
+    <div class="card success-card">
+      <p><strong>🌳 Tree Structure</strong> — Root hub connects to host. Hubs act as intermediate controllers. Leaves are I/O devices. Up to 127 devices with 7-bit addresses.</p>
+    </div>
+    <div class="card">
+      <p><strong>📢 Broadcast</strong> — Host messages are broadcast to ALL devices via hubs. Only the addressed device responds. Device-to-device communication is NOT possible.</p>
+    </div>
+    <div class="card warn-card">
+      <p><strong>🔄 Polling-Based</strong> — USB operates strictly on polling. A device may only send a message in response to a poll from the host. No conflicts from simultaneous upstream messages.</p>
+    </div>
+    <div class="card">
+      <p><strong>⚡ Speed Matching</strong> — Messages on high-speed links are always transmitted at high speed, even for low-speed destination devices. Hub then forwards at low speed.</p>
+    </div>
+  </div>
+
+  <h3>USB Address Assignment (Plug-and-Play)</h3>
+  <ol class="steps">
+    <li>New device connected to hub — starts with <strong>address 0</strong>.</li>
+    <li>Hub detects new device, records in its status information.</li>
+    <li>Host periodically polls hubs to find new devices.</li>
+    <li>Host sends commands to configure the device, reads its capabilities.</li>
+    <li>Host assigns device a <strong>unique 7-bit USB address</strong>.</li>
+    <li>Device responds only to its new address from this point on.</li>
+  </ol>
+</section>
+
+<!-- ══════════════════════════════════ QUICK QUIZ ══════════════════════════════════ -->
+<section class="section" id="quiz">
+  <div class="section-header">
+    <div class="section-num">★</div>
+    <h2>Quick Revision Quiz</h2>
+  </div>
+  <p style="color:var(--muted);margin-bottom:20px">Click each question to reveal the answer.</p>
+
+  <div class="quiz-card" onclick="this.classList.toggle('open')">
+    <div class="quiz-hint">CLICK TO REVEAL</div>
+    <div class="quiz-q">Q1: What are the two major advantages of bus organization?</div>
+    <div class="quiz-a">Versatility and Low Cost. A single set of wires can connect many different subsystems.</div>
+  </div>
+
+  <div class="quiz-card" onclick="this.classList.toggle('open')">
+    <div class="quiz-hint">CLICK TO REVEAL</div>
+    <div class="quiz-q">Q2: What is the main disadvantage of a bus?</div>
+    <div class="quiz-a">It can become a communication bottleneck, limiting maximum I/O throughput since all devices share one communication channel.</div>
+  </div>
+
+  <div class="quiz-card" onclick="this.classList.toggle('open')">
+    <div class="quiz-hint">CLICK TO REVEAL</div>
+    <div class="quiz-q">Q3: What are the 3 control lines in asynchronous bus handshaking?</div>
+    <div class="quiz-a">ReadReq (request memory read + address on data lines), DataRdy (data word ready on data lines), Ack (acknowledge ReadReq or DataRdy).</div>
+  </div>
+
+  <div class="quiz-card" onclick="this.classList.toggle('open')">
+    <div class="quiz-hint">CLICK TO REVEAL</div>
+    <div class="quiz-q">Q4: What is Memory-Mapped I/O?</div>
+    <div class="quiz-a">I/O devices and memory share the same address space. Portions of address space are assigned to I/O devices. Normal Move instructions are used — no special I/O instructions needed.</div>
+  </div>
+
+  <div class="quiz-card" onclick="this.classList.toggle('open')">
+    <div class="quiz-hint">CLICK TO REVEAL</div>
+    <div class="quiz-q">Q5: Why is Programmed I/O (polling) inefficient?</div>
+    <div class="quiz-a">The CPU wastes time continuously checking the status register of the slow I/O device. The CPU may poll millions of times before the device is ready, wasting processing power.</div>
+  </div>
+
+  <div class="quiz-card" onclick="this.classList.toggle('open')">
+    <div class="quiz-hint">CLICK TO REVEAL</div>
+    <div class="quiz-q">Q6: What is Interrupt Latency?</div>
+    <div class="quiz-a">The time required to save the processor's current state (registers, flags, PC) and restore context before and after executing the Interrupt Service Routine (ISR).</div>
+  </div>
+
+  <div class="quiz-card" onclick="this.classList.toggle('open')">
+    <div class="quiz-hint">CLICK TO REVEAL</div>
+    <div class="quiz-q">Q7: What is the problem with Daisy Chaining?</div>
+    <div class="quiz-a">STARVATION — devices at the end of the chain (far from processor = lowest priority) may never get serviced if higher-priority devices keep requesting the bus.</div>
+  </div>
+
+  <div class="quiz-card" onclick="this.classList.toggle('open')">
+    <div class="quiz-hint">CLICK TO REVEAL</div>
+    <div class="quiz-q">Q8: What information does the CPU send to the DMA controller to start a transfer?</div>
+    <div class="quiz-a">Starting address of the memory block, word count (number of words to transfer), control bits to specify R/W mode, and a start bit to begin the DMA transfer.</div>
+  </div>
+
+  <div class="quiz-card" onclick="this.classList.toggle('open')">
+    <div class="quiz-hint">CLICK TO REVEAL</div>
+    <div class="quiz-q">Q9: What is the difference between Cycle Stealing and Burst mode in DMA?</div>
+    <div class="quiz-a">Cycle Stealing: DMA steals one memory cycle at a time — CPU and DMA are interwoven. Burst Mode: DMA gets exclusive bus access for the entire block transfer — CPU is locked out completely until done.</div>
+  </div>
+
+  <div class="quiz-card" onclick="this.classList.toggle('open')">
+    <div class="quiz-hint">CLICK TO REVEAL</div>
+    <div class="quiz-q">Q10: Why can't USB devices communicate directly with each other?</div>
+    <div class="quiz-a">USB uses a tree structure with host-controlled polling. Messages from a device go only upstream towards the root hub, not to sibling devices. Only the host can broadcast messages; devices can only respond to host polls.</div>
+  </div>
+
+  <div class="quiz-card" onclick="this.classList.toggle('open')">
+    <div class="quiz-hint">CLICK TO REVEAL</div>
+    <div class="quiz-q">Q11: In vectored interrupts, what does the interrupt vector contain?</div>
+    <div class="quiz-a">The interrupt vector contains the identification of the device, the starting address of the ISR (Interrupt Service Routine), and/or the address of the branch to the ISR.</div>
+  </div>
+
+  <div class="quiz-card" onclick="this.classList.toggle('open')">
+    <div class="quiz-hint">CLICK TO REVEAL</div>
+    <div class="quiz-q">Q12: What are the 3 bus arbitration signal lines and their functions?</div>
+    <div class="quiz-a">BR (Bus Request) — open drain, logical OR of all device requests. BG (Bus Grant) — processor signals to all DMAs (daisy chain) that bus is free. BBSY (Bus Busy) — current master indicates it's using the bus.</div>
+  </div>
+</section>
+
+<!-- Summary Cheatsheet -->
+<section class="section">
+  <div class="section-header">
+    <div class="section-num">✓</div>
+    <h2>One-Page Cheatsheet</h2>
+  </div>
+  <div class="card" style="font-size:13px">
+    <div class="table-wrap" style="border:none;margin:0">
+      <table>
+        <thead><tr><th>Topic</th><th>Key Point to Remember</th></tr></thead>
+        <tbody>
+          <tr><td>Bus</td><td>Shared wires; 3 line types: Address, Data, Control; Advantages: versatility + low cost; Disadvantage: bottleneck</td></tr>
+          <tr><td>Synchronous Bus</td><td>Has clock; all devices same speed; fast; limited length (clock skew)</td></tr>
+          <tr><td>Asynchronous Bus</td><td>No clock; handshaking (ReadReq, DataRdy, Ack); handles varied speeds; can be long</td></tr>
+          <tr><td>I/O Interface</td><td>Address decoder + control circuits + DATAIN/DATAOUT registers + STATUS register (SIN/SOUT flags)</td></tr>
+          <tr><td>Memory-Mapped I/O</td><td>I/O and memory share address space; normal Move instructions used; OS protects I/O addresses</td></tr>
+          <tr><td>Programmed I/O</td><td>CPU polls STATUS register; SIN=1→read; SOUT=1→write; wastes CPU time (busy-waiting)</td></tr>
+          <tr><td>Interrupts</td><td>Device signals CPU when ready; CPU executes ISR; eliminates busy-waiting; saves/restores state</td></tr>
+          <tr><td>Interrupt Techniques</td><td>Polling (slow), Vectored (fast, uses vector table), Nesting (priority), Daisy Chain (proximity = priority, starvation risk)</td></tr>
+          <tr><td>DMA</td><td>Controller handles block transfer directly between device ↔ memory; CPU sends: start addr + word count + R/W + start; interrupts on completion</td></tr>
+          <tr><td>DMA Modes</td><td>Cycle Stealing = interwoven with CPU; Burst = exclusive bus access</td></tr>
+          <tr><td>Bus Arbitration</td><td>Centralized = one arbiter; Distributed = all devices participate using ID comparison (ARB0–ARB3)</td></tr>
+          <tr><td>USB</td><td>Tree: host→root hub→hubs→devices; up to 127 devices; polling-based; plug-and-play; high-speed always transmitted at HS even to low-speed device</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  I/O Organization Study Guide · Module 4 · Computer Organization · Good luck on your exam! 🎯
+</footer>
+
+<a href="#" class="top-btn" title="Back to top">↑</a>
+
+<script>
+// Smooth scroll for nav
+document.querySelectorAll('nav a').forEach(a => {
+  a.addEventListener('click', e => {
+    e.preventDefault();
+    const target = document.querySelector(a.getAttribute('href'));
+    if (target) target.scrollIntoView({ behavior: 'smooth' });
+  });
+});
+
+// Highlight active nav item
+const sections = document.querySelectorAll('.section');
+const navLinks = document.querySelectorAll('nav a');
+window.addEventListener('scroll', () => {
+  let current = '';
+  sections.forEach(s => {
+    if (window.scrollY >= s.offsetTop - 100) current = s.id;
+  });
+  navLinks.forEach(a => {
+    a.style.color = a.getAttribute('href') === '#' + current ? 'var(--accent)' : '';
+    a.style.borderBottomColor = a.getAttribute('href') === '#' + current ? 'var(--accent)' : 'transparent';
+  });
+});
+</script>
+</body>
+</html>
